@@ -21,7 +21,9 @@ func cliSetup() {
 
 	flag.Int("port", 80, "set the port to listen to")
 	flag.Int("status", 200, "set the status to response with")
-
+	flag.String("response", "", "file to send on each response")
+	flag.String("type", "application/json", "Content Type of each response")
+	flag.Bool("verbose", true, "if set the server will print all body and header information")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
@@ -34,15 +36,28 @@ func main() {
 	setupServer()
 }
 
-type PrintServer struct{}
+type PrintServer struct {
+	response []byte
+}
 
 func setupServer() {
+
+	printer := &PrintServer{}
+	if viper.GetString("response") != "" {
+		data, err := ioutil.ReadFile(viper.GetString("response"))
+		if err != nil {
+			fmt.Printf("failed to read response file - using none : %+v\n", err)
+		} else {
+			printer.response = data
+		}
+	}
+
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", viper.GetInt("port")),
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
-		Handler:      &PrintServer{},
+		Handler:      printer,
 	}
 
 	server.ListenAndServe()
@@ -51,11 +66,22 @@ func setupServer() {
 func (p *PrintServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	data, _ := ioutil.ReadAll(r.Body)
 
-	fmt.Printf("[%s] %s", r.Method, r.RequestURI)
+	fmt.Printf("[%s] %s\n", r.Method, r.RequestURI)
 
-	fmt.Print(string(data))
+	if viper.GetBool("verbose") {
 
-	fmt.Println()
+		fmt.Printf("Header:%+v\n", r.Header)
+		fmt.Printf("Agent:%+v\n", r.UserAgent())
+		fmt.Printf("Query:%+v\n", r.URL.Query())
 
-	w.WriteHeader(viper.GetInt("status"))
+		fmt.Println(string(data))
+	}
+
+	w.Header().Add("Content-Type", viper.GetString("type"))
+	if p.response != nil {
+		w.Write(p.response)
+	} else {
+		w.WriteHeader(viper.GetInt("status"))
+	}
+
 }
