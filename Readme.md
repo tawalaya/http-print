@@ -1,6 +1,6 @@
 # http-print
 
-This is a simple local http server that prints every request to console. Its similar to `python3 -m http.server` but also excepts POST, PUT, HEAD etc.
+This is a simple local http server that prints every request to console. It's similar to `python3 -m http.server` but also accepts POST, PUT, HEAD etc.
 
 ## Getting Started
 
