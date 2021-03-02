@@ -15,6 +15,7 @@ func init() {
 
 }
 
+var rawString string
 func cliSetup() {
 	viper.SetDefault("port", 80)
 	viper.SetDefault("status", 200)
@@ -22,6 +23,7 @@ func cliSetup() {
 	flag.Int("port", 80, "set the port to listen to")
 	flag.Int("status", 200, "set the status to response with")
 	flag.String("response", "", "file to send on each response")
+	flag.String("raw","","instead of file you can also specify a raw string as a response")
 	flag.String("type", "application/json", "Content Type of each response")
 	flag.Bool("verbose", true, "if set the server will print all body and header information")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
@@ -50,6 +52,8 @@ func setupServer() {
 		} else {
 			printer.response = data
 		}
+	} else if response:=viper.GetString("raw") ; response != ""{
+		printer.response = []byte(response)
 	}
 
 	server := &http.Server{
